@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spinr — Focus Wheel App</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --green: #10B981;
+      --green-glow: rgba(16,185,129,0.15);
+      --green-border: rgba(16,185,129,0.25);
+      --bg: #050c09;
+      --bg2: #080f0b;
+      --surface: rgba(255,255,255,0.03);
+      --surface2: rgba(255,255,255,0.06);
+      --text: #eeeae4;
+      --muted: #5f6b64;
+      --muted2: #8a9690;
+      --border: rgba(255,255,255,0.07);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── NOISE TEXTURE ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+      pointer-events: none;
+      opacity: 0.4;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 48px;
+      height: 64px;
+      backdrop-filter: blur(24px) saturate(1.5);
+      background: rgba(5,12,9,0.75);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-logo {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800; font-size: 20px;
+      color: var(--text);
+      letter-spacing: -0.5px;
+      display: flex; align-items: center; gap: 10px;
+    }
+
+    .nav-logo-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 10px var(--green);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    .nav-links { display: flex; gap: 36px; align-items: center; }
+    .nav-links a {
+      color: var(--muted2); text-decoration: none;
+      font-size: 13px; font-weight: 500; letter-spacing: 0.2px;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--text); }
+
+    .nav-cta {
+      background: var(--green) !important;
+      color: #fff !important;
+      padding: 8px 20px;
+      border-radius: 100px;
+      font-size: 13px !important;
+      font-weight: 700 !important;
+      transition: box-shadow 0.2s, transform 0.2s !important;
+    }
+    .nav-cta:hover {
+      box-shadow: 0 0 24px rgba(16,185,129,0.4) !important;
+      transform: translateY(-1px);
+    }
+
+    /* ── HERO ── */
+    .hero {
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      text-align: center;
+      padding: 140px 24px 100px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-orb {
+      position: absolute; border-radius: 50%;
+      filter: blur(100px); pointer-events: none;
+    }
+    .orb1 { width: 600px; height: 600px; background: rgba(16,185,129,0.08); top: -150px; left: -150px; }
+    .orb2 { width: 500px; height: 500px; background: rgba(16,185,129,0.05); bottom: -100px; right: -100px; }
+    .orb3 { width: 300px; height: 300px; background: rgba(99,102,241,0.06); top: 30%; left: 60%; }
+
+    .hero-eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      border: 1px solid var(--green-border);
+      background: var(--green-glow);
+      border-radius: 100px;
+      padding: 5px 14px 5px 8px;
+      font-size: 11px; font-weight: 600;
+      color: var(--green); letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 32px;
+      animation: fadeUp 0.7s ease both;
+    }
+
+    .hero-eyebrow-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--green);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    .hero h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(52px, 9vw, 108px);
+      font-weight: 800;
+      line-height: 0.95;
+      letter-spacing: -4px;
+      margin-bottom: 28px;
+      animation: fadeUp 0.7s 0.1s ease both;
+    }
+
+    .hero h1 em {
+      font-style: normal;
+      color: transparent;
+      -webkit-text-stroke: 1.5px var(--green);
+    }
+
+    .hero-sub {
+      max-width: 480px;
+      font-size: 17px; font-weight: 300;
+      color: var(--muted2);
+      line-height: 1.75;
+      margin-bottom: 52px;
+      animation: fadeUp 0.7s 0.2s ease both;
+    }
+
+    .hero-actions {
+      display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;
+      animation: fadeUp 0.7s 0.3s ease both;
+    }
+
+    .btn-main {
+      background: var(--green);
+      color: #fff;
+      padding: 15px 36px;
+      border-radius: 100px;
+      font-size: 14px; font-weight: 700; letter-spacing: 0.3px;
+      text-decoration: none;
+      box-shadow: 0 0 48px rgba(16,185,129,0.25), inset 0 1px 0 rgba(255,255,255,0.2);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .btn-main:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 64px rgba(16,185,129,0.35), inset 0 1px 0 rgba(255,255,255,0.2);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--muted2);
+      padding: 15px 28px;
+      border-radius: 100px;
+      font-size: 14px; font-weight: 500;
+      text-decoration: none;
+      border: 1px solid var(--border);
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .btn-ghost:hover { color: var(--text); border-color: rgba(255,255,255,0.15); }
+
+    /* ── WHEEL ── */
+    .wheel-wrap {
+      margin-top: 80px;
+      animation: fadeUp 0.7s 0.4s ease both;
+      position: relative;
+    }
+
+    .wheel-ring {
+      width: 280px; height: 280px;
+      border-radius: 50%;
+      background: conic-gradient(
+        #10B981 0deg 72deg,
+        #6366F1 72deg 144deg,
+        #F59E0B 144deg 216deg,
+        #EF4444 216deg 288deg,
+        #8B5CF6 288deg 360deg
+      );
+      animation: rotateSlow 30s linear infinite;
+      position: relative;
+      box-shadow: 0 0 100px rgba(16,185,129,0.15), 0 0 0 1px rgba(255,255,255,0.05);
+    }
+
+    .wheel-ring::before {
+      content: '';
+      position: absolute; inset: 3px;
+      border-radius: 50%;
+      background: var(--bg);
+    }
+
+    .wheel-ring::after {
+      content: 'S';
+      font-family: 'Syne', sans-serif;
+      font-size: 42px; font-weight: 800;
+      color: var(--green);
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .wheel-pointer {
+      position: absolute;
+      top: -16px; left: 50%; transform: translateX(-50%);
+      width: 0; height: 0;
+      border-left: 10px solid transparent;
+      border-right: 10px solid transparent;
+      border-top: 20px solid var(--green);
+      filter: drop-shadow(0 0 8px var(--green));
+    }
+
+    /* ── DIVIDER ── */
+    .divider {
+      width: 100%; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border), transparent);
+    }
+
+    /* ── FEATURES ── */
+    .features {
+      padding: 120px 24px;
+      max-width: 1100px; margin: 0 auto;
+    }
+
+    .tag {
+      display: inline-block;
+      font-size: 10px; font-weight: 700; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--green);
+      margin-bottom: 20px;
+    }
+
+    .section-h {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(34px, 5vw, 56px);
+      font-weight: 800; letter-spacing: -2px;
+      line-height: 1.05;
+      margin-bottom: 16px;
+    }
+
+    .section-p {
+      font-size: 16px; color: var(--muted2);
+      max-width: 440px; line-height: 1.75;
+      margin-bottom: 72px; font-weight: 300;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 28px;
+      transition: border-color 0.3s, transform 0.3s, background 0.3s;
+      cursor: default;
+    }
+
+    .card:hover {
+      border-color: var(--green-border);
+      background: rgba(16,185,129,0.04);
+      transform: translateY(-3px);
+    }
+
+    .card-icon {
+      font-size: 28px; margin-bottom: 16px;
+      display: block;
+    }
+
+    .card-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 16px; font-weight: 700;
+      margin-bottom: 8px; letter-spacing: -0.3px;
+    }
+
+    .card-desc {
+      font-size: 13px; color: var(--muted2);
+      line-height: 1.7; font-weight: 300;
+    }
+
+    /* ── STATS BAR ── */
+    .stats-bar {
+      background: var(--bg2);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 56px 24px;
+    }
+
+    .stats-inner {
+      max-width: 700px; margin: 0 auto;
+      display: grid; grid-template-columns: repeat(3,1fr);
+      gap: 0;
+    }
+
+    .stat-item {
+      text-align: center;
+      padding: 0 40px;
+      position: relative;
+    }
+
+    .stat-item:not(:last-child)::after {
+      content: '';
+      position: absolute; right: 0; top: 50%; transform: translateY(-50%);
+      height: 40px; width: 1px;
+      background: var(--border);
+    }
+
+    .stat-n {
+      font-family: 'Syne', sans-serif;
+      font-size: 52px; font-weight: 800;
+      color: var(--green); letter-spacing: -3px;
+      line-height: 1;
+    }
+
+    .stat-l {
+      font-size: 11px; color: var(--muted);
+      margin-top: 6px; letter-spacing: 1.5px;
+      text-transform: uppercase; font-weight: 500;
+    }
+
+    /* ── PRIVACY ── */
+    #privacy {
+      padding: 120px 24px;
+      max-width: 760px; margin: 0 auto;
+    }
+
+    .privacy-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      overflow: hidden;
+    }
+
+    .privacy-header {
+      padding: 40px 48px 32px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(16,185,129,0.03);
+    }
+
+    .privacy-header h2 {
+      font-family: 'Syne', sans-serif;
+      font-size: 28px; font-weight: 800;
+      letter-spacing: -1px; margin-bottom: 6px;
+    }
+
+    .privacy-meta {
+      font-size: 12px; color: var(--muted);
+      letter-spacing: 0.3px;
+    }
+
+    .privacy-body { padding: 40px 48px; }
+
+    .privacy-body h3 {
+      font-family: 'Syne', sans-serif;
+      font-size: 14px; font-weight: 700;
+      color: var(--green); letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin: 36px 0 12px;
+    }
+
+    .privacy-body h3:first-child { margin-top: 0; }
+
+    .privacy-body p {
+      font-size: 14px; color: var(--muted2);
+      line-height: 1.85; margin-bottom: 12px;
+      font-weight: 300;
+    }
+
+    .privacy-body ul {
+      padding-left: 18px; margin-bottom: 12px;
+    }
+
+    .privacy-body ul li {
+      font-size: 14px; color: var(--muted2);
+      line-height: 1.85; margin-bottom: 6px;
+      font-weight: 300;
+    }
+
+    .privacy-body a {
+      color: var(--green); text-decoration: none;
+      border-bottom: 1px solid var(--green-border);
+      transition: border-color 0.2s;
+    }
+    .privacy-body a:hover { border-color: var(--green); }
+
+    /* ── FOOTER ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 32px 48px;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 16px;
+    }
+
+    .footer-logo {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800; font-size: 16px;
+      color: var(--muted2);
+    }
+
+    .footer-copy {
+      font-size: 12px; color: var(--muted);
+    }
+
+    .footer-link {
+      font-size: 12px; color: var(--muted2);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .footer-link:hover { color: var(--green); }
+
+    /* ── ANIMATIONS ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes rotateSlow {
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 768px) {
+      nav { padding: 0 20px; }
+      .nav-links a:not(.nav-cta) { display: none; }
+      .grid { grid-template-columns: 1fr; }
+      .stats-inner { grid-template-columns: 1fr; gap: 32px; }
+      .stat-item::after { display: none; }
+      .privacy-header, .privacy-body { padding: 28px 24px; }
+      footer { flex-direction: column; text-align: center; padding: 24px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <div class="nav-logo">
+      <div class="nav-logo-dot"></div>
+      Spinr
+    </div>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#privacy">Privacy</a>
+      <a href="#privacy" class="nav-cta">Privacy Policy</a>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-orb orb1"></div>
+    <div class="hero-orb orb2"></div>
+    <div class="hero-orb orb3"></div>
+
+    <div class="hero-eyebrow">
+      <div class="hero-eyebrow-dot"></div>
+      Focus · Decide · Achieve
+    </div>
+
+    <h1>Stop thinking.<br /><em>Start spinning.</em></h1>
+
+    <p class="hero-sub">
+      Spinr uses a spin wheel to eliminate decision fatigue — pick your topic, start your timer, and build a streak you're proud of.
+    </p>
+
+    <div class="hero-actions">
+      <a href="#features" class="btn-main">Explore Features</a>
+      <a href="#privacy" class="btn-ghost">Privacy Policy →</a>
+    </div>
+
+    <div class="wheel-wrap">
+      <div class="wheel-pointer"></div>
+      <div class="wheel-ring"></div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- STATS -->
+  <div class="stats-bar">
+    <div class="stats-inner">
+      <div class="stat-item">
+        <div class="stat-n">5+</div>
+        <div class="stat-l">Focus Modes</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-n">∞</div>
+        <div class="stat-l">Custom Topics</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-n">0</div>
+        <div class="stat-l">Excuses Left</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FEATURES -->
+  <section class="features" id="features">
+    <div class="tag">What Spinr Does</div>
+    <h2 class="section-h">Built to keep you<br />in the zone.</h2>
+    <p class="section-p">For students, freelancers, and anyone who struggles to decide what to work on next.</p>
+
+    <div class="grid">
+      <div class="card">
+        <span class="card-icon">🎯</span>
+        <div class="card-title">Focus Wheel</div>
+        <div class="card-desc">Add your study topics and spin. No more wasting time deciding — the wheel picks for you.</div>
+      </div>
+      <div class="card">
+        <span class="card-icon">🎡</span>
+        <div class="card-title">Decision Wheel</div>
+        <div class="card-desc">Can't choose between options? Add them and let the wheel decide. Works for anything in life.</div>
+      </div>
+      <div class="card">
+        <span class="card-icon">⏱️</span>
+        <div class="card-title">Pomodoro Timer</div>
+        <div class="card-desc">Custom focus and break intervals with cycle tracking. Smart break reminders keep you fresh.</div>
+      </div>
+      <div class="card">
+        <span class="card-icon">🔥</span>
+        <div class="card-title">Daily Streaks</div>
+        <div class="card-desc">Complete your topic of the day and keep your streak alive. Build lasting study habits.</div>
+      </div>
+      <div class="card">
+        <span class="card-icon">📊</span>
+        <div class="card-title">Session Stats</div>
+        <div class="card-desc">Track total sessions, time focused, and which topics you study most. See your growth.</div>
+      </div>
+      <div class="card">
+        <span class="card-icon">🏆</span>
+        <div class="card-title">Achievements</div>
+        <div class="card-desc">Unlock badges as you hit milestones. Stay motivated with a rewarding progression system.</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- PRIVACY -->
+  <section id="privacy">
+    <div class="tag" style="margin-bottom:20px">Legal</div>
+    <h2 class="section-h" style="margin-bottom:48px">Privacy Policy</h2>
+
+    <div class="privacy-box">
+      <div class="privacy-header">
+        <h2>Privacy Policy</h2>
+        <div class="privacy-meta">Effective date: April 11, 2026 &nbsp;·&nbsp; Spinr App</div>
+      </div>
+
+      <div class="privacy-body">
+        <p>Welcome to Spinr. This Privacy Policy describes how we handle your data when you use our mobile application. We are committed to protecting your privacy and being transparent about our practices.</p>
+
+        <h3>1. Information We Collect</h3>
+        <p>Spinr is designed with a privacy-first approach. We collect minimal data:</p>
+        <ul>
+          <li><strong>Local Data:</strong> Topics, sessions, streaks, and achievements are stored locally on your device. We never access or transmit this data.</li>
+          <li><strong>Advertising Data:</strong> We use Google AdMob to display ads. AdMob may collect device identifiers and usage data to serve ads. This is governed by Google's Privacy Policy.</li>
+          <li><strong>Notifications:</strong> If you grant permission, we send local push notifications for break reminders. No data is sent to our servers.</li>
+        </ul>
+
+        <h3>2. How We Use Your Information</h3>
+        <ul>
+          <li>To provide and improve core app features</li>
+          <li>To display advertisements via Google AdMob</li>
+          <li>To send local break reminder notifications (only with your permission)</li>
+        </ul>
+
+        <h3>3. Data Storage</h3>
+        <p>All personal data is stored locally on your device using SQLite and AsyncStorage. We have no access to this data and it is never transmitted externally. Uninstalling the app deletes all your data.</p>
+
+        <h3>4. Third-Party Services</h3>
+        <ul>
+          <li><strong>Google AdMob:</strong> Used for in-app advertising. View Google's privacy policy at <a href="https://policies.google.com/privacy" target="_blank">policies.google.com/privacy</a>.</li>
+        </ul>
+
+        <h3>5. Children's Privacy</h3>
+        <p>Spinr is not directed at children under 13. We do not knowingly collect personal information from children under 13. If you believe a child has provided us information, please contact us.</p>
+
+        <h3>6. Your Rights</h3>
+        <p>Since all data lives on your device, you have full control. You can delete all app data by uninstalling the application at any time. You may also disable notifications in your device settings.</p>
+
+        <h3>7. Changes to This Policy</h3>
+        <p>We may update this Privacy Policy occasionally. Changes will be reflected by updating the effective date above. Continued use of the app constitutes acceptance of the updated policy.</p>
+
+        <h3>8. Contact Us</h3>
+        <p>Questions about this Privacy Policy? Reach us at:<br />
+        <a href="mailto:mohmmedlachheb19@gmail.com">mohmmedlachheb19@gmail.com</a></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-logo">Spinr</div>
+    <div class="footer-copy">© 2026 Spinr. All rights reserved.</div>
+    <a href="#privacy" class="footer-link">Privacy Policy</a>
+  </footer>
+
+</body>
+</html>
